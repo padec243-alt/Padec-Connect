@@ -1,42 +1,53 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Grid, Wrench, Package, ChevronRight } from 'lucide-react';
+import { 
+  ClipboardList, 
+  Briefcase, 
+  ShoppingBag, 
+  ChevronRight,
+  Plane,
+  GraduationCap,
+  Stethoscope,
+  Globe,
+  HomeIcon,
+  TrendingUp,
+  Users,
+  Zap
+} from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { Button } from '../components/UI';
 import { SlideData } from '../types';
-
-interface Props {
-  onFinish: () => void;
-}
+import { useNavigation } from '../context/NavigationContext';
 
 const slides: SlideData[] = [
   {
     id: 1,
-    title: "L'Écosystème Unifié",
-    desc: "Accédez à tous les services PADEC et partenaires certifiés en un seul endroit centralisé.",
-    icon: Grid,
+    title: "Services à la Demande",
+    desc: "Démarches administratives, voyages, entrepreneuriat, gestion de projets, formations et bien plus. Gestion stratégique de vos démarches.",
+    icon: ClipboardList,
     color: "text-cyan-400",
     bgGradient: "from-cyan-500/20 to-blue-500/5"
   },
   {
     id: 2,
-    title: "Expertise à la Demande",
-    desc: "Trouvez des techniciens qualifiés pour vos besoins urgents, instantanément géolocalisés.",
-    icon: Wrench,
+    title: "E-Services",
+    desc: "Co-working, soins médicaux, visas congolais, aide à la famille et événementiel. Simplifiez vos démarches administratives et sociales.",
+    icon: Zap,
     color: "text-blue-400",
     bgGradient: "from-blue-500/20 to-indigo-500/5"
   },
   {
     id: 3,
-    title: "Market Hub Global",
-    desc: "Une place de marché B2B & B2C intelligente avec logistique intégrée de bout en bout.",
-    icon: Package,
+    title: "Market Hub",
+    desc: "Boutique en ligne moderne et répertoire des entrepreneurs. E-commerce complet et annuaire des acteurs économiques en RD Congo.",
+    icon: ShoppingBag,
     color: "text-purple-400",
     bgGradient: "from-purple-500/20 to-pink-500/5"
   }
 ];
 
-export const OnboardingScreen: React.FC<Props> = ({ onFinish }) => {
+export const OnboardingScreen: React.FC = () => {
+  const { navigate } = useNavigation();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(0);
 
@@ -45,7 +56,8 @@ export const OnboardingScreen: React.FC<Props> = ({ onFinish }) => {
       setDirection(1);
       setStep(step + 1);
     } else {
-      onFinish();
+      // Show register form by default after onboarding
+      navigate('auth', { mode: 'register' });
     }
   };
 
@@ -75,7 +87,7 @@ export const OnboardingScreen: React.FC<Props> = ({ onFinish }) => {
   return (
     <SafeArea className="justify-between p-6 bg-slate-950">
       <div className="w-full flex justify-end pt-4 z-20">
-        <button onClick={onFinish} className="text-slate-500 text-sm font-medium hover:text-white transition-colors">Passer</button>
+        <button onClick={() => navigate('auth', { mode: 'register' })} className="text-slate-500 text-sm font-medium hover:text-white transition-colors">Passer</button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center relative">

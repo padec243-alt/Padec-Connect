@@ -39,17 +39,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input: React.FC<InputProps> = ({ icon: Icon, ...props }) => (
-  <motion.div 
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="relative w-full mb-4 group"
-  >
+  <div className="relative w-full mb-4 group">
     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors z-10">
       <Icon size={20} />
     </div>
     <input 
       {...props}
-      className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-cyan-500 focus:bg-slate-900 focus:shadow-[0_0_15px_rgba(6,182,212,0.15)] transition-all placeholder:text-slate-600"
+      className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-cyan-500 focus:bg-slate-900 focus:shadow-[0_0_15px_rgba(6,182,212,0.15)] transition-all placeholder:text-slate-600 disabled:opacity-60 disabled:cursor-not-allowed"
     />
-  </motion.div>
+  </div>
 );
