@@ -1,6 +1,7 @@
 import {
   ref,
   uploadBytes,
+  uploadString,
   getDownloadURL,
   deleteObject,
   listAll,
@@ -26,6 +27,27 @@ export class StorageService {
       return downloadUrl;
     } catch (error) {
       console.error(`Error uploading file to ${filePath}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload une image base64 vers Firebase Storage
+   */
+  static async uploadBase64(
+    filePath: string,
+    base64String: string,
+    format: string = 'jpeg'
+  ): Promise<string> {
+    try {
+      const storageRef = ref(storage, filePath);
+      await uploadString(storageRef, base64String, 'base64', {
+        contentType: `image/${format}`,
+      });
+      const downloadUrl = await getDownloadURL(storageRef);
+      return downloadUrl;
+    } catch (error) {
+      console.error(`Error uploading base64 to ${filePath}:`, error);
       throw error;
     }
   }

@@ -25,7 +25,8 @@ export type ScreenName =
   | 'visa'
   | 'family-help'
   | 'events'
-  | 'housing';
+  | 'housing'
+  | 'admin';
 
 export interface SlideData {
   id: number;

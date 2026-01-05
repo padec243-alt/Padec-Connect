@@ -29,35 +29,49 @@ import { VisaScreen } from './screens/VisaScreen';
 import { FamilyHelpScreen } from './screens/FamilyHelpScreen';
 import { EventsScreen } from './screens/EventsScreen';
 import { HousingScreen } from './screens/HousingScreen';
+import { AdminDashboard } from './screens/admin/AdminDashboard';
 
 function AppContent() {
   const { currentScreen, navigate } = useNavigation();
-  const { isAuthenticated, profileSetupCompleted, loading } = useAuthContext();
+  const { isAuthenticated, profileSetupCompleted, userProfile, loading } = useAuthContext();
 
-  // Rediriger vers profile-setup si l'utilisateur est connecté mais n'a pas terminé la configuration
+  // Rediriger selon le rôle et l'état du profil
   useEffect(() => {
     // Attendre que le chargement soit terminé
     if (loading) return;
 
-    // Si l'utilisateur est authentifié mais n'a pas terminé le setup du profil
-    if (isAuthenticated && profileSetupCompleted === false) {
-      // Ne pas rediriger si on est déjà sur profile-setup, auth, splash, onboarding ou home
-      // (home est exclu car on peut y arriver après avoir terminé le setup)
-      if (currentScreen !== 'profile-setup' &&
-          currentScreen !== 'auth' &&
-          currentScreen !== 'splash' &&
-          currentScreen !== 'onboarding' &&
-          currentScreen !== 'home') {
-        navigate('profile-setup');
+    // Si l'utilisateur est authentifié
+    if (isAuthenticated) {
+      // Si le profil n'est pas complété, rediriger vers profile-setup
+      if (profileSetupCompleted === false) {
+        if (currentScreen !== 'profile-setup' &&
+            currentScreen !== 'auth' &&
+            currentScreen !== 'splash' &&
+            currentScreen !== 'onboarding' &&
+            currentScreen !== 'home' &&
+            currentScreen !== 'admin') {
+          navigate('profile-setup');
+        }
+      }
+      // Si le profil est complété et l'utilisateur est admin, rediriger vers admin
+      else if (profileSetupCompleted === true && userProfile?.role === 'adm') {
+        if (currentScreen === 'home' || currentScreen === 'splash' || currentScreen === 'onboarding') {
+          navigate('admin');
+        }
       }
     }
-  }, [isAuthenticated, profileSetupCompleted, loading, currentScreen, navigate]);
+  }, [isAuthenticated, profileSetupCompleted, userProfile?.role, loading, currentScreen, navigate]);
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: -20 }
   };
+
+  // Admin Dashboard (sans MobileLayout)
+  if (currentScreen === 'admin') {
+    return <AdminDashboard />;
+  }
 
   return (
     <MobileLayout>

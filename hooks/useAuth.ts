@@ -13,6 +13,7 @@ export interface UserProfile {
   city?: string;
   nationality?: string;
   profilePictureUrl?: string;
+  role?: 'client' | 'adm';
 }
 
 export const useAuth = () => {

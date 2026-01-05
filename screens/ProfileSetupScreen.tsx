@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, MapPin, Globe, User, Upload, CheckCircle, Loader, X } from 'lucide-react';
+import { Phone, MapPin, Globe, User, Upload, CheckCircle, Loader, X, Camera } from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { Button, Input } from '../components/UI';
 import { useNavigation } from '../context/NavigationContext';
@@ -7,6 +7,10 @@ import { useAuthContext } from '../context/AuthContext';
 import { FirestoreService } from '../services/FirestoreService';
 import { StorageService } from '../services/StorageService';
 import { getCountriesList, NATIONALITIES } from '../data/geographicData';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+
+// Détecte si on est sur Capacitor (app native)
+const isNativePlatform = () => !!(window as any).Capacitor?.isNativePlatform?.();
 
 export const ProfileSetupScreen: React.FC = () => {
   const { navigate } = useNavigation();
@@ -22,12 +26,14 @@ export const ProfileSetupScreen: React.FC = () => {
   const [nationality, setNationality] = useState('Congolaise (RDC)');
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
 
   // Get countries and cities
   const countries = getCountriesList();
   const selectedCountry = countries.find((c) => c.id === country);
   const cities = selectedCountry ? selectedCountry.cities : [];
 
+  // Sélection d'image via input file (web)
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -36,11 +42,34 @@ export const ProfileSetupScreen: React.FC = () => {
         return;
       }
       setProfileImage(file);
+      setImageBase64(null);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Sélection d'image via Capacitor Camera (mobile natif)
+  const handleNativeImageSelect = async (source: CameraSource) => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 80,
+        allowEditing: true,
+        resultType: CameraResultType.Base64,
+        source: source,
+      });
+
+      if (image.base64String) {
+        const base64Data = `data:image/${image.format};base64,${image.base64String}`;
+        setImagePreview(base64Data);
+        setImageBase64(image.base64String);
+        setProfileImage(null); // On utilise base64 au lieu de File
+      }
+    } catch (err) {
+      console.error('Erreur sélection image:', err);
+      // L'utilisateur a annulé, pas d'erreur à afficher
     }
   };
 
@@ -80,11 +109,19 @@ export const ProfileSetupScreen: React.FC = () => {
     try {
       let profilePictureUrl = null;
 
-      // Upload profile picture if selected
+      // Upload profile picture if selected (File ou base64)
       if (profileImage) {
+        // Upload via File (web)
         profilePictureUrl = await StorageService.uploadFile(
           `profiles/${user.uid}/avatar.jpg`,
           profileImage
+        );
+      } else if (imageBase64) {
+        // Upload via base64 (mobile natif)
+        profilePictureUrl = await StorageService.uploadBase64(
+          `profiles/${user.uid}/avatar.jpg`,
+          imageBase64,
+          'jpeg'
         );
       }
 
@@ -98,6 +135,7 @@ export const ProfileSetupScreen: React.FC = () => {
         nationality,
         profilePictureUrl,
         profileSetupCompleted: true,
+        role: 'client', // Rôle par défaut
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }, true);
@@ -245,13 +283,35 @@ export const ProfileSetupScreen: React.FC = () => {
                     onClick={() => {
                       setProfileImage(null);
                       setImagePreview(null);
+                      setImageBase64(null);
                     }}
                     className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 rounded-full p-2 transition-colors"
                   >
                     <X size={20} className="text-white" />
                   </button>
                 </div>
+              ) : isNativePlatform() ? (
+                /* Interface native pour mobile (Capacitor) */
+                <div className="mb-6 flex flex-col gap-3">
+                  <button
+                    onClick={() => handleNativeImageSelect(CameraSource.Camera)}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-3 w-full h-20 border-2 border-dashed border-slate-700 rounded-2xl hover:border-green-500/50 transition-colors disabled:opacity-50"
+                  >
+                    <Camera size={28} className="text-green-400" />
+                    <span className="text-slate-400">Prendre une photo</span>
+                  </button>
+                  <button
+                    onClick={() => handleNativeImageSelect(CameraSource.Photos)}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-3 w-full h-20 border-2 border-dashed border-slate-700 rounded-2xl hover:border-green-500/50 transition-colors disabled:opacity-50"
+                  >
+                    <Upload size={28} className="text-green-400" />
+                    <span className="text-slate-400">Choisir depuis la galerie</span>
+                  </button>
+                </div>
               ) : (
+                /* Interface web standard */
                 <label className="mb-6 flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-700 rounded-2xl cursor-pointer hover:border-green-500/50 transition-colors">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <Upload size={40} className="text-green-400 mb-2" />
