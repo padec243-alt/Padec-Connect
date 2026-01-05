@@ -6,6 +6,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  addDoc,
   query,
   where,
   Query,
@@ -124,6 +125,23 @@ export class FirestoreService {
       await deleteDoc(docRef);
     } catch (error) {
       console.error(`Error deleting document from ${collectionName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Ajouter un nouveau document avec ID auto-généré
+   */
+  static async addDocument<T extends DocumentData>(
+    collectionName: string,
+    data: T
+  ): Promise<string> {
+    try {
+      const collectionRef = collection(db, collectionName);
+      const docRef = await addDoc(collectionRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error(`Error adding document to ${collectionName}:`, error);
       throw error;
     }
   }
