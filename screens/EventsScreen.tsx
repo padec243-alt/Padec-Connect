@@ -114,14 +114,29 @@ export const EventsScreen: React.FC = () => {
 
           <div className="px-4 py-4 space-y-4">
             {/* Image */}
-            <div className="aspect-video bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center relative">
-              <Calendar size={60} className="text-pink-400" />
+            <div className="aspect-video bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center relative overflow-hidden">
+              {selectedEvent.image ? (
+                <img src={selectedEvent.image} alt={selectedEvent.name} className="w-full h-full object-cover" />
+              ) : (
+                <Calendar size={60} className="text-pink-400" />
+              )}
               {selectedEvent.featured && (
                 <div className="absolute top-3 left-3 bg-gradient-to-r from-pink-500 to-purple-500 px-2 py-1 rounded-full">
                   <span className="text-white text-xs font-bold">⭐ En vedette</span>
                 </div>
               )}
             </div>
+
+            {/* Galerie photos */}
+            {selectedEvent.images && selectedEvent.images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                {selectedEvent.images.map((img, i) => (
+                  <div key={i} className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Infos */}
             <div>

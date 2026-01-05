@@ -53,8 +53,14 @@ export const ServiceDetailScreen: React.FC = () => {
             className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-16 h-16 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                {service.icon && <service.icon size={32} className="text-cyan-400" />}
+              <div className="w-16 h-16 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 overflow-hidden">
+                {service.image ? (
+                  <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
+                ) : service.icon ? (
+                  <service.icon size={32} className="text-cyan-400" />
+                ) : (
+                  <Calendar size={32} className="text-cyan-400" />
+                )}
               </div>
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-white mb-1">{service.title}</h2>

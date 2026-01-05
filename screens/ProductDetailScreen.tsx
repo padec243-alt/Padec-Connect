@@ -7,14 +7,6 @@ import { useCart } from '../context/CartContext';
 import { Button } from '../components/UI';
 import { Product } from '../types';
 
-// Images simulées pour le produit
-const productImages = [
-  { id: 1, color: 'from-purple-500/20 to-pink-500/20' },
-  { id: 2, color: 'from-blue-500/20 to-cyan-500/20' },
-  { id: 3, color: 'from-green-500/20 to-emerald-500/20' },
-  { id: 4, color: 'from-orange-500/20 to-yellow-500/20' },
-];
-
 export const ProductDetailScreen: React.FC = () => {
   const { navigate, goBack, params } = useNavigation();
   const { addToCart } = useCart();
@@ -33,6 +25,15 @@ export const ProductDetailScreen: React.FC = () => {
     inStock: true,
     rating: 4.8
   };
+
+  // Utiliser les vraies images du produit ou des placeholders
+  const productImages = product.image 
+    ? [product.image] 
+    : product.images && product.images.length > 0 
+      ? product.images 
+      : [];
+
+  const hasImages = productImages.length > 0;
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
@@ -96,16 +97,24 @@ export const ProductDetailScreen: React.FC = () => {
         </div>
 
         <div className="px-6 py-6 space-y-6">
-          {/* Galerie d'images défilante */}
+          {/* Galerie d'images */}
           <div className="relative">
             <motion.div
               key={currentImageIndex}
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
-              className={`aspect-square bg-gradient-to-br ${productImages[currentImageIndex].color} rounded-3xl flex items-center justify-center relative overflow-hidden`}
+              className="aspect-square bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl flex items-center justify-center relative overflow-hidden"
             >
-              <ShoppingBag size={120} className="text-slate-400" />
+              {hasImages ? (
+                <img 
+                  src={productImages[currentImageIndex]} 
+                  alt={product.name} 
+                  className="w-full h-full object-cover rounded-3xl"
+                />
+              ) : (
+                <ShoppingBag size={120} className="text-slate-400" />
+              )}
 
               {/* Indicateur de promotion */}
               {product.originalPrice && (
@@ -118,50 +127,58 @@ export const ProductDetailScreen: React.FC = () => {
             </motion.div>
 
             {/* Boutons navigation images */}
-            <button
-              onClick={prevImage}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-900/80 flex items-center justify-center border border-slate-700"
-            >
-              <ChevronLeft size={20} className="text-white" />
-            </button>
-            <button
-              onClick={nextImage}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-900/80 flex items-center justify-center border border-slate-700"
-            >
-              <ChevronRight size={20} className="text-white" />
-            </button>
+            {hasImages && productImages.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-900/80 flex items-center justify-center border border-slate-700"
+                >
+                  <ChevronLeft size={20} className="text-white" />
+                </button>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-900/80 flex items-center justify-center border border-slate-700"
+                >
+                  <ChevronRight size={20} className="text-white" />
+                </button>
+              </>
+            )}
 
             {/* Indicateurs de pagination */}
-            <div className="flex justify-center gap-2 mt-4">
-              {productImages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentImageIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    index === currentImageIndex 
-                      ? 'w-6 bg-purple-500' 
-                      : 'bg-slate-600'
-                  }`}
-                />
-              ))}
-            </div>
+            {hasImages && productImages.length > 1 && (
+              <div className="flex justify-center gap-2 mt-4">
+                {productImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentImageIndex 
+                        ? 'w-6 bg-purple-500' 
+                        : 'bg-slate-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Miniatures défilantes */}
-            <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar">
-              {productImages.map((img, index) => (
-                <button
-                  key={img.id}
-                  onClick={() => setCurrentImageIndex(index)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br ${img.color} flex items-center justify-center border-2 transition-all ${
-                    index === currentImageIndex 
-                      ? 'border-purple-500 scale-110' 
-                      : 'border-transparent'
-                  }`}
-                >
-                  <ShoppingBag size={24} className="text-slate-400" />
-                </button>
-              ))}
-            </div>
+            {hasImages && productImages.length > 1 && (
+              <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar">
+                {productImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                      index === currentImageIndex 
+                        ? 'border-purple-500 scale-110' 
+                        : 'border-transparent'
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}

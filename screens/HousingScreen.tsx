@@ -111,12 +111,29 @@ export const HousingScreen: React.FC = () => {
           </div>
 
           <div className="px-4 py-4 space-y-4">
-            {/* Image */}
-            <div className="aspect-video bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center">
-              {selectedListing.type === 'hotel' ? <Hotel size={60} className="text-amber-400" /> :
-               selectedListing.type === 'land' ? <Square size={60} className="text-amber-400" /> :
-               <Home size={60} className="text-amber-400" />}
-            </div>
+            {/* Images */}
+            {selectedListing.images && selectedListing.images.length > 0 ? (
+              <div className="space-y-2">
+                <div className="aspect-video rounded-2xl overflow-hidden">
+                  <img src={selectedListing.images[0]} alt={selectedListing.title} className="w-full h-full object-cover" />
+                </div>
+                {selectedListing.images.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    {selectedListing.images.slice(1).map((img, i) => (
+                      <div key={i} className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden">
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="aspect-video bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center">
+                {selectedListing.type === 'hotel' ? <Hotel size={60} className="text-amber-400" /> :
+                 selectedListing.type === 'land' ? <Square size={60} className="text-amber-400" /> :
+                 <Home size={60} className="text-amber-400" />}
+              </div>
+            )}
 
             {/* Infos */}
             <div>

@@ -42,8 +42,12 @@ export const ActorDetailScreen: React.FC = () => {
             className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6"
           >
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/20">
-                <Users size={40} className="text-cyan-400" />
+              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/20 overflow-hidden">
+                {actor.image ? (
+                  <img src={actor.image} alt={actor.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Users size={40} className="text-cyan-400" />
+                )}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
