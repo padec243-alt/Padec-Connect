@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, Users, Wrench, Grid, Building2,
@@ -7,11 +7,12 @@ import {
   ShoppingCart, ClipboardList, LogOut, Home, Clock, MapPin, Star,
   Wifi, Coffee, Bed, Bath, Square, Phone,
   Music, GraduationCap, Ticket, Plus, Edit, Trash2, Save, Eye, CreditCard,
-  TrendingUp, DollarSign, CheckCircle, XCircle, AlertCircle
+  TrendingUp, DollarSign, CheckCircle, XCircle, AlertCircle, Image, Upload
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuthContext } from '../../context/AuthContext';
 import { FirestoreService } from '../../services/FirestoreService';
+import { StorageService } from '../../services/StorageService';
 import { auth } from '../../config/firebase';
 
 // ============ INTERFACES ============
@@ -24,7 +25,7 @@ interface DashboardStats {
   pendingRequests: number;
 }
 
-// Product - exactement comme MarketScreen
+// Product - exactement comme MarketScreen (1 image)
 interface AdminProduct {
   id?: string;
   name: string;
@@ -34,10 +35,10 @@ interface AdminProduct {
   category: 'mode' | 'vetements' | 'chaussures' | 'parfums' | 'esthetique' | 'bricolage' | 'agriculture' | 'tech' | 'maison' | 'montres' | 'cadeaux';
   inStock: boolean;
   rating: number;
-  image?: string;
+  image?: string; // 1 image principale
 }
 
-// Service - exactement comme ServicesScreen
+// Service - exactement comme ServicesScreen (1 image)
 interface AdminService {
   id?: string;
   title: string;
@@ -47,9 +48,10 @@ interface AdminService {
   duration: string;
   location: string;
   rating: number;
+  image?: string; // 1 image
 }
 
-// Workspace - exactement comme CoworkingScreen
+// Workspace - exactement comme CoworkingScreen (plusieurs images)
 interface AdminWorkspace {
   id?: string;
   name: string;
@@ -64,9 +66,10 @@ interface AdminWorkspace {
   amenities: string[];
   available: boolean;
   openHours: string;
+  images: string[]; // Plusieurs photos de l'espace
 }
 
-// Health - exactement comme HealthScreen
+// Health - exactement comme HealthScreen (1 image)
 interface AdminHealth {
   id?: string;
   name: string;
@@ -80,9 +83,10 @@ interface AdminHealth {
   openHours: string;
   price?: number;
   description: string;
+  image?: string; // 1 image (photo médecin, logo hôpital, etc.)
 }
 
-// Housing - exactement comme HousingScreen
+// Housing - exactement comme HousingScreen (plusieurs images pour immobilier)
 interface AdminHousing {
   id?: string;
   title: string;
@@ -101,9 +105,10 @@ interface AdminHousing {
   available: boolean;
   featured: boolean;
   description: string;
+  images: string[]; // Plusieurs photos (immobilier nécessite plusieurs photos)
 }
 
-// Event - exactement comme EventsScreen
+// Event - exactement comme EventsScreen (1 image affiche + galerie optionnelle)
 interface AdminEvent {
   id?: string;
   name: string;
@@ -120,9 +125,11 @@ interface AdminEvent {
   organizer: string;
   rating: number;
   featured: boolean;
+  image?: string; // Affiche principale
+  images?: string[]; // Galerie optionnelle
 }
 
-// Actor - exactement comme RepertoireScreen
+// Actor - exactement comme RepertoireScreen (1 logo/photo)
 interface AdminActor {
   id?: string;
   name: string;
@@ -132,6 +139,7 @@ interface AdminActor {
   description: string;
   services: string[];
   rating: number;
+  image?: string; // Logo ou photo de l'entreprise/personne
 }
 
 // User
@@ -148,6 +156,122 @@ const productCategories = ['mode', 'vetements', 'chaussures', 'parfums', 'esthet
 const serviceCategories = ['Administratif', 'Voyage', 'Entrepreneuriat', 'Réseau', 'Formation', 'Immobilier'];
 const workspaceTypes = ['coworking', 'private-office', 'meeting-room'];
 const healthTypes = ['hospital', 'doctor', 'nurse', 'advisor', 'ambulance'];
+
+// ============ IMAGE UPLOAD COMPONENT ============
+interface ImageUploadProps {
+  label: string;
+  value?: string;
+  onChange: (url: string) => void;
+  folder: string;
+}
+
+const SingleImageUpload: React.FC<ImageUploadProps> = ({ label, value, onChange, folder }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploading(true);
+    try {
+      const url = await StorageService.uploadFile(file, folder);
+      onChange(url);
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Erreur lors de l\'upload');
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div>
+      <label className="text-slate-400 text-sm">{label}</label>
+      <div className="mt-1 flex items-center gap-3">
+        {value ? (
+          <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-700">
+            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+            <button onClick={() => onChange('')} className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">×</button>
+          </div>
+        ) : (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-500 transition-colors"
+          >
+            {uploading ? (
+              <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Upload size={20} className="text-slate-500" />
+                <span className="text-slate-500 text-xs mt-1">Photo</span>
+              </>
+            )}
+          </div>
+        )}
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+      </div>
+    </div>
+  );
+};
+
+interface MultiImageUploadProps {
+  label: string;
+  values: string[];
+  onChange: (urls: string[]) => void;
+  folder: string;
+  maxImages?: number;
+}
+
+const MultiImageUpload: React.FC<MultiImageUploadProps> = ({ label, values, onChange, folder, maxImages = 10 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploading(true);
+    try {
+      const url = await StorageService.uploadFile(file, folder);
+      onChange([...values, url]);
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Erreur lors de l\'upload');
+    }
+    setUploading(false);
+  };
+
+  const removeImage = (index: number) => {
+    onChange(values.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div>
+      <label className="text-slate-400 text-sm">{label} ({values.length}/{maxImages})</label>
+      <div className="mt-1 flex flex-wrap gap-2">
+        {values.map((url, i) => (
+          <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-700">
+            <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+            <button onClick={() => removeImage(i)} className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">×</button>
+          </div>
+        ))}
+        {values.length < maxImages && (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-500 transition-colors"
+          >
+            {uploading ? (
+              <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Plus size={18} className="text-slate-500" />
+            )}
+          </div>
+        )}
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+      </div>
+    </div>
+  );
+};
 const housingTypes = ['hotel', 'apartment', 'house', 'land'];
 const housingCategories = ['hotel', 'rental', 'sale'];
 const eventCategories = ['music', 'business', 'education', 'culture', 'party'];
@@ -492,7 +616,7 @@ const ProductsSection: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [formData, setFormData] = useState<AdminProduct>({
-    name: '', description: '', price: 0, originalPrice: undefined, category: 'mode', inStock: true, rating: 4.5
+    name: '', description: '', price: 0, originalPrice: undefined, category: 'mode', inStock: true, rating: 4.5, image: ''
   });
 
   useEffect(() => { loadProducts(); }, []);
@@ -513,7 +637,7 @@ const ProductsSection: React.FC = () => {
       }
       setShowForm(false);
       setEditingProduct(null);
-      setFormData({ name: '', description: '', price: 0, category: 'mode', inStock: true, rating: 4.5 });
+      setFormData({ name: '', description: '', price: 0, category: 'mode', inStock: true, rating: 4.5, image: '' });
       loadProducts();
     } catch (e) { console.error(e); }
   };
@@ -535,7 +659,7 @@ const ProductsSection: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-white font-bold">Produits Market Hub</h3>
-        <button onClick={() => { setShowForm(true); setEditingProduct(null); setFormData({ name: '', description: '', price: 0, category: 'mode', inStock: true, rating: 4.5 }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white text-sm font-medium">
+        <button onClick={() => { setShowForm(true); setEditingProduct(null); setFormData({ name: '', description: '', price: 0, category: 'mode', inStock: true, rating: 4.5, image: '' }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white text-sm font-medium">
           <Plus size={18} /> Ajouter Produit
         </button>
       </div>
@@ -546,6 +670,13 @@ const ProductsSection: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-white font-bold text-lg mb-4">{editingProduct ? 'Modifier' : 'Ajouter'} un Produit</h3>
             <div className="space-y-4">
+              {/* Image du produit */}
+              <SingleImageUpload 
+                label="Photo du produit" 
+                value={formData.image} 
+                onChange={(url) => setFormData({...formData, image: url})} 
+                folder="products" 
+              />
               <div>
                 <label className="text-slate-400 text-sm">Nom *</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full mt-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white" />
@@ -599,8 +730,12 @@ const ProductsSection: React.FC = () => {
         {products.map(product => (
           <div key={product.id} className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
             <div className="flex justify-between items-start mb-3">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                <Package size={24} className="text-purple-400" />
+              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center overflow-hidden">
+                {product.image ? (
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Package size={24} className="text-purple-400" />
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => handleEdit(product)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400"><Edit size={16} /></button>
@@ -628,7 +763,7 @@ const ServicesSection: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingService, setEditingService] = useState<AdminService | null>(null);
   const [formData, setFormData] = useState<AdminService>({
-    title: '', description: '', category: 'Administratif', price: 0, duration: '', location: '', rating: 4.5
+    title: '', description: '', category: 'Administratif', price: 0, duration: '', location: '', rating: 4.5, image: ''
   });
 
   useEffect(() => { loadServices(); }, []);
@@ -649,7 +784,7 @@ const ServicesSection: React.FC = () => {
       }
       setShowForm(false);
       setEditingService(null);
-      setFormData({ title: '', description: '', category: 'Administratif', price: 0, duration: '', location: '', rating: 4.5 });
+      setFormData({ title: '', description: '', category: 'Administratif', price: 0, duration: '', location: '', rating: 4.5, image: '' });
       loadServices();
     } catch (e) { console.error(e); }
   };
@@ -671,7 +806,7 @@ const ServicesSection: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-white font-bold">Services à la Demande</h3>
-        <button onClick={() => { setShowForm(true); setEditingService(null); setFormData({ title: '', description: '', category: 'Administratif', price: 0, duration: '', location: '', rating: 4.5 }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl text-white text-sm font-medium">
+        <button onClick={() => { setShowForm(true); setEditingService(null); setFormData({ title: '', description: '', category: 'Administratif', price: 0, duration: '', location: '', rating: 4.5, image: '' }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl text-white text-sm font-medium">
           <Plus size={18} /> Ajouter Service
         </button>
       </div>
@@ -681,6 +816,13 @@ const ServicesSection: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-white font-bold text-lg mb-4">{editingService ? 'Modifier' : 'Ajouter'} un Service</h3>
             <div className="space-y-4">
+              {/* Image du service */}
+              <SingleImageUpload 
+                label="Image du service" 
+                value={formData.image} 
+                onChange={(url) => setFormData({...formData, image: url})} 
+                folder="services" 
+              />
               <div>
                 <label className="text-slate-400 text-sm">Titre *</label>
                 <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full mt-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white" />
@@ -792,7 +934,7 @@ const CoworkingSection: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<AdminWorkspace | null>(null);
   const [formData, setFormData] = useState<AdminWorkspace>({
-    name: '', type: 'coworking', description: '', address: '', pricePerDay: 0, capacity: 10, rating: 4.5, amenities: [], available: true, openHours: '8h - 20h'
+    name: '', type: 'coworking', description: '', address: '', pricePerDay: 0, capacity: 10, rating: 4.5, amenities: [], available: true, openHours: '8h - 20h', images: []
   });
   const [amenityInput, setAmenityInput] = useState('');
 
@@ -814,14 +956,14 @@ const CoworkingSection: React.FC = () => {
       }
       setShowForm(false);
       setEditingWorkspace(null);
-      setFormData({ name: '', type: 'coworking', description: '', address: '', pricePerDay: 0, capacity: 10, rating: 4.5, amenities: [], available: true, openHours: '8h - 20h' });
+      setFormData({ name: '', type: 'coworking', description: '', address: '', pricePerDay: 0, capacity: 10, rating: 4.5, amenities: [], available: true, openHours: '8h - 20h', images: [] });
       loadWorkspaces();
     } catch (e) { console.error(e); }
   };
 
   const handleEdit = (workspace: AdminWorkspace) => {
     setEditingWorkspace(workspace);
-    setFormData(workspace);
+    setFormData({...workspace, images: workspace.images || []});
     setShowForm(true);
   };
 
@@ -847,7 +989,7 @@ const CoworkingSection: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-white font-bold">Espaces de Travail</h3>
-        <button onClick={() => { setShowForm(true); setEditingWorkspace(null); setFormData({ name: '', type: 'coworking', description: '', address: '', pricePerDay: 0, capacity: 10, rating: 4.5, amenities: [], available: true, openHours: '8h - 20h' }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl text-white text-sm font-medium">
+        <button onClick={() => { setShowForm(true); setEditingWorkspace(null); setFormData({ name: '', type: 'coworking', description: '', address: '', pricePerDay: 0, capacity: 10, rating: 4.5, amenities: [], available: true, openHours: '8h - 20h', images: [] }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl text-white text-sm font-medium">
           <Plus size={18} /> Ajouter Espace
         </button>
       </div>
@@ -857,6 +999,14 @@ const CoworkingSection: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-white font-bold text-lg mb-4">{editingWorkspace ? 'Modifier' : 'Ajouter'} un Espace</h3>
             <div className="space-y-4">
+              {/* Photos de l'espace (plusieurs) */}
+              <MultiImageUpload 
+                label="Photos de l'espace" 
+                values={formData.images} 
+                onChange={(urls) => setFormData({...formData, images: urls})} 
+                folder="workspaces" 
+                maxImages={8}
+              />
               <div>
                 <label className="text-slate-400 text-sm">Nom *</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full mt-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white" />
@@ -979,7 +1129,7 @@ const HealthSection: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingHealth, setEditingHealth] = useState<AdminHealth | null>(null);
   const [formData, setFormData] = useState<AdminHealth>({
-    name: '', type: 'hospital', specialty: '', address: '', rating: 4.5, available: true, phone: '', openHours: '8h - 18h', price: undefined, description: ''
+    name: '', type: 'hospital', specialty: '', address: '', rating: 4.5, available: true, phone: '', openHours: '8h - 18h', price: undefined, description: '', image: ''
   });
 
   useEffect(() => { loadHealthServices(); }, []);
@@ -1000,7 +1150,7 @@ const HealthSection: React.FC = () => {
       }
       setShowForm(false);
       setEditingHealth(null);
-      setFormData({ name: '', type: 'hospital', specialty: '', address: '', rating: 4.5, available: true, phone: '', openHours: '8h - 18h', price: undefined, description: '' });
+      setFormData({ name: '', type: 'hospital', specialty: '', address: '', rating: 4.5, available: true, phone: '', openHours: '8h - 18h', price: undefined, description: '', image: '' });
       loadHealthServices();
     } catch (e) { console.error(e); }
   };
@@ -1022,7 +1172,7 @@ const HealthSection: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-white font-bold">Santé & Médecine</h3>
-        <button onClick={() => { setShowForm(true); setEditingHealth(null); setFormData({ name: '', type: 'hospital', specialty: '', address: '', rating: 4.5, available: true, phone: '', openHours: '8h - 18h', price: undefined, description: '' }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl text-white text-sm font-medium">
+        <button onClick={() => { setShowForm(true); setEditingHealth(null); setFormData({ name: '', type: 'hospital', specialty: '', address: '', rating: 4.5, available: true, phone: '', openHours: '8h - 18h', price: undefined, description: '', image: '' }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl text-white text-sm font-medium">
           <Plus size={18} /> Ajouter Service Santé
         </button>
       </div>
@@ -1032,6 +1182,13 @@ const HealthSection: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-white font-bold text-lg mb-4">{editingHealth ? 'Modifier' : 'Ajouter'} un Service Santé</h3>
             <div className="space-y-4">
+              {/* Photo (logo hôpital, photo médecin, etc.) */}
+              <SingleImageUpload 
+                label="Photo / Logo" 
+                value={formData.image} 
+                onChange={(url) => setFormData({...formData, image: url})} 
+                folder="health" 
+              />
               <div>
                 <label className="text-slate-400 text-sm">Nom *</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full mt-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white" />
@@ -1137,7 +1294,7 @@ const HousingSection: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingListing, setEditingListing] = useState<AdminHousing | null>(null);
   const [formData, setFormData] = useState<AdminHousing>({
-    title: '', type: 'hotel', category: 'hotel', price: 0, priceUnit: '/nuit', location: '', city: '', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: undefined, rating: 4.5, amenities: [], available: true, featured: false, description: ''
+    title: '', type: 'hotel', category: 'hotel', price: 0, priceUnit: '/nuit', location: '', city: '', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: undefined, rating: 4.5, amenities: [], available: true, featured: false, description: '', images: []
   });
   const [amenityInput, setAmenityInput] = useState('');
 
@@ -1159,14 +1316,14 @@ const HousingSection: React.FC = () => {
       }
       setShowForm(false);
       setEditingListing(null);
-      setFormData({ title: '', type: 'hotel', category: 'hotel', price: 0, priceUnit: '/nuit', location: '', city: '', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: undefined, rating: 4.5, amenities: [], available: true, featured: false, description: '' });
+      setFormData({ title: '', type: 'hotel', category: 'hotel', price: 0, priceUnit: '/nuit', location: '', city: '', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: undefined, rating: 4.5, amenities: [], available: true, featured: false, description: '', images: [] });
       loadListings();
     } catch (e) { console.error(e); }
   };
 
   const handleEdit = (listing: AdminHousing) => {
     setEditingListing(listing);
-    setFormData(listing);
+    setFormData({...listing, images: listing.images || []});
     setShowForm(true);
   };
 
@@ -1192,7 +1349,7 @@ const HousingSection: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-white font-bold">Hébergement (Hôtels, Locations, Ventes)</h3>
-        <button onClick={() => { setShowForm(true); setEditingListing(null); setFormData({ title: '', type: 'hotel', category: 'hotel', price: 0, priceUnit: '/nuit', location: '', city: '', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: undefined, rating: 4.5, amenities: [], available: true, featured: false, description: '' }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl text-white text-sm font-medium">
+        <button onClick={() => { setShowForm(true); setEditingListing(null); setFormData({ title: '', type: 'hotel', category: 'hotel', price: 0, priceUnit: '/nuit', location: '', city: '', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: undefined, rating: 4.5, amenities: [], available: true, featured: false, description: '', images: [] }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl text-white text-sm font-medium">
           <Plus size={18} /> Ajouter Annonce
         </button>
       </div>
@@ -1202,6 +1359,14 @@ const HousingSection: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-white font-bold text-lg mb-4">{editingListing ? 'Modifier' : 'Ajouter'} une Annonce</h3>
             <div className="space-y-4">
+              {/* Photos du bien (plusieurs pour immobilier) */}
+              <MultiImageUpload 
+                label="Photos du bien" 
+                values={formData.images} 
+                onChange={(urls) => setFormData({...formData, images: urls})} 
+                folder="housing" 
+                maxImages={10}
+              />
               <div>
                 <label className="text-slate-400 text-sm">Titre *</label>
                 <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full mt-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white" />
@@ -1322,14 +1487,30 @@ const HousingSection: React.FC = () => {
         {listings.map(listing => (
           <div key={listing.id} className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
             <div className="flex justify-between items-start mb-3">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                <Hotel size={24} className="text-amber-400" />
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center overflow-hidden">
+                {listing.images && listing.images.length > 0 ? (
+                  <img src={listing.images[0]} alt={listing.title} className="w-full h-full object-cover" />
+                ) : (
+                  <Hotel size={24} className="text-amber-400" />
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => handleEdit(listing)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400"><Edit size={16} /></button>
                 <button onClick={() => handleDelete(listing.id!)} className="p-2 rounded-lg bg-slate-800 hover:bg-red-500/20 text-red-400"><Trash2 size={16} /></button>
               </div>
             </div>
+            {listing.images && listing.images.length > 1 && (
+              <div className="flex gap-1 mb-2">
+                {listing.images.slice(1, 4).map((img, i) => (
+                  <div key={i} className="w-8 h-8 rounded overflow-hidden">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+                {listing.images.length > 4 && (
+                  <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-slate-400 text-xs">+{listing.images.length - 4}</div>
+                )}
+              </div>
+            )}
             <h4 className="text-white font-bold mb-1">{listing.title}</h4>
             <p className="text-slate-400 text-sm mb-1">{listing.type} • {listing.category}</p>
             <p className="text-slate-500 text-xs mb-2 flex items-center gap-1"><MapPin size={12} /> {listing.city}, {listing.province}</p>
@@ -1356,7 +1537,7 @@ const EventsSection: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AdminEvent | null>(null);
   const [formData, setFormData] = useState<AdminEvent>({
-    name: '', description: '', category: 'business', date: '', time: '', location: '', address: '', price: 0, vipPrice: undefined, availableTickets: 100, totalTickets: 100, organizer: '', rating: 4.5, featured: false
+    name: '', description: '', category: 'business', date: '', time: '', location: '', address: '', price: 0, vipPrice: undefined, availableTickets: 100, totalTickets: 100, organizer: '', rating: 4.5, featured: false, image: '', images: []
   });
 
   useEffect(() => { loadEvents(); }, []);
@@ -1377,14 +1558,14 @@ const EventsSection: React.FC = () => {
       }
       setShowForm(false);
       setEditingEvent(null);
-      setFormData({ name: '', description: '', category: 'business', date: '', time: '', location: '', address: '', price: 0, vipPrice: undefined, availableTickets: 100, totalTickets: 100, organizer: '', rating: 4.5, featured: false });
+      setFormData({ name: '', description: '', category: 'business', date: '', time: '', location: '', address: '', price: 0, vipPrice: undefined, availableTickets: 100, totalTickets: 100, organizer: '', rating: 4.5, featured: false, image: '', images: [] });
       loadEvents();
     } catch (e) { console.error(e); }
   };
 
   const handleEdit = (event: AdminEvent) => {
     setEditingEvent(event);
-    setFormData(event);
+    setFormData({...event, image: event.image || '', images: event.images || []});
     setShowForm(true);
   };
 
@@ -1399,7 +1580,7 @@ const EventsSection: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-white font-bold">Événements</h3>
-        <button onClick={() => { setShowForm(true); setEditingEvent(null); setFormData({ name: '', description: '', category: 'business', date: '', time: '', location: '', address: '', price: 0, vipPrice: undefined, availableTickets: 100, totalTickets: 100, organizer: '', rating: 4.5, featured: false }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl text-white text-sm font-medium">
+        <button onClick={() => { setShowForm(true); setEditingEvent(null); setFormData({ name: '', description: '', category: 'business', date: '', time: '', location: '', address: '', price: 0, vipPrice: undefined, availableTickets: 100, totalTickets: 100, organizer: '', rating: 4.5, featured: false, image: '', images: [] }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl text-white text-sm font-medium">
           <Plus size={18} /> Ajouter Événement
         </button>
       </div>
@@ -1409,6 +1590,21 @@ const EventsSection: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-white font-bold text-lg mb-4">{editingEvent ? 'Modifier' : 'Ajouter'} un Événement</h3>
             <div className="space-y-4">
+              {/* Affiche principale de l'événement */}
+              <SingleImageUpload 
+                label="Affiche de l'événement" 
+                value={formData.image} 
+                onChange={(url) => setFormData({...formData, image: url})} 
+                folder="events" 
+              />
+              {/* Galerie photos optionnelle */}
+              <MultiImageUpload 
+                label="Galerie photos (optionnel)" 
+                values={formData.images || []} 
+                onChange={(urls) => setFormData({...formData, images: urls})} 
+                folder="events" 
+                maxImages={6}
+              />
               <div>
                 <label className="text-slate-400 text-sm">Nom *</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full mt-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white" />
@@ -1495,8 +1691,12 @@ const EventsSection: React.FC = () => {
         {events.map(event => (
           <div key={event.id} className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
             <div className="flex justify-between items-start mb-3">
-              <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center">
-                <Calendar size={24} className="text-pink-400" />
+              <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center overflow-hidden">
+                {event.image ? (
+                  <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Calendar size={24} className="text-pink-400" />
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => handleEdit(event)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400"><Edit size={16} /></button>
@@ -1528,7 +1728,7 @@ const ActorsSection: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingActor, setEditingActor] = useState<AdminActor | null>(null);
   const [formData, setFormData] = useState<AdminActor>({
-    name: '', category: '', location: '', verified: false, description: '', services: [], rating: 4.5
+    name: '', category: '', location: '', verified: false, description: '', services: [], rating: 4.5, image: ''
   });
   const [serviceInput, setServiceInput] = useState('');
 
@@ -1550,14 +1750,14 @@ const ActorsSection: React.FC = () => {
       }
       setShowForm(false);
       setEditingActor(null);
-      setFormData({ name: '', category: '', location: '', verified: false, description: '', services: [], rating: 4.5 });
+      setFormData({ name: '', category: '', location: '', verified: false, description: '', services: [], rating: 4.5, image: '' });
       loadActors();
     } catch (e) { console.error(e); }
   };
 
   const handleEdit = (actor: AdminActor) => {
     setEditingActor(actor);
-    setFormData(actor);
+    setFormData({...actor, image: actor.image || ''});
     setShowForm(true);
   };
 
@@ -1583,7 +1783,7 @@ const ActorsSection: React.FC = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-white font-bold">Répertoire des Acteurs</h3>
-        <button onClick={() => { setShowForm(true); setEditingActor(null); setFormData({ name: '', category: '', location: '', verified: false, description: '', services: [], rating: 4.5 }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl text-white text-sm font-medium">
+        <button onClick={() => { setShowForm(true); setEditingActor(null); setFormData({ name: '', category: '', location: '', verified: false, description: '', services: [], rating: 4.5, image: '' }); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl text-white text-sm font-medium">
           <Plus size={18} /> Ajouter Acteur
         </button>
       </div>
@@ -1593,6 +1793,13 @@ const ActorsSection: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-white font-bold text-lg mb-4">{editingActor ? 'Modifier' : 'Ajouter'} un Acteur</h3>
             <div className="space-y-4">
+              {/* Logo ou photo de l'acteur */}
+              <SingleImageUpload 
+                label="Logo / Photo" 
+                value={formData.image} 
+                onChange={(url) => setFormData({...formData, image: url})} 
+                folder="actors" 
+              />
               <div>
                 <label className="text-slate-400 text-sm">Nom *</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full mt-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white" />
@@ -1651,8 +1858,12 @@ const ActorsSection: React.FC = () => {
         {actors.map(actor => (
           <div key={actor.id} className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
             <div className="flex justify-between items-start mb-3">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                <Briefcase size={24} className="text-emerald-400" />
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center overflow-hidden">
+                {actor.image ? (
+                  <img src={actor.image} alt={actor.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Briefcase size={24} className="text-emerald-400" />
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => handleEdit(actor)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400"><Edit size={16} /></button>
