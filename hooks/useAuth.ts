@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { FirestoreService } from '../services/FirestoreService';
@@ -21,6 +21,19 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileSetupCompleted, setProfileSetupCompleted] = useState<boolean | null>(null);
+
+  // Fonction pour rafraîchir le profil utilisateur
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const profile = await FirestoreService.getDocument<UserProfile>('users', user.uid);
+      setUserProfile(profile);
+      setProfileSetupCompleted(profile?.profileSetupCompleted === true);
+    } catch (profileError) {
+      console.error('Error refreshing user profile:', profileError);
+    }
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -67,6 +80,7 @@ export const useAuth = () => {
     loading,
     error,
     isAuthenticated: !!user,
-    profileSetupCompleted
+    profileSetupCompleted,
+    refreshProfile
   };
 };

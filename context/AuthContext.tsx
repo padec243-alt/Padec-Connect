@@ -8,12 +8,13 @@ interface AuthContextType {
   error: string | null;
   isAuthenticated: boolean;
   profileSetupCompleted: boolean | null;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, userProfile, loading, error, isAuthenticated, profileSetupCompleted } = useAuth();
+  const { user, userProfile, loading, error, isAuthenticated, profileSetupCompleted, refreshProfile } = useAuth();
 
   const value: AuthContextType = {
     user,
@@ -22,6 +23,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     error,
     isAuthenticated,
     profileSetupCompleted,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

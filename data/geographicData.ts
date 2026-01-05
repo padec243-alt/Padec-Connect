@@ -39,7 +39,6 @@ const COUNTRIES_DATA: Country[] = [
       { id: "bandundu", name: "Bandundu" },
       { id: "kasai", name: "Kasai" },
       { id: "uvira", name: "Uvira" },
-      { id: "bukavu", name: "Bukavu" },
     ],
   },
   {

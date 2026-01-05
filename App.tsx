@@ -41,11 +41,13 @@ function AppContent() {
 
     // Si l'utilisateur est authentifié mais n'a pas terminé le setup du profil
     if (isAuthenticated && profileSetupCompleted === false) {
-      // Ne pas rediriger si on est déjà sur profile-setup, auth ou splash/onboarding
+      // Ne pas rediriger si on est déjà sur profile-setup, auth, splash, onboarding ou home
+      // (home est exclu car on peut y arriver après avoir terminé le setup)
       if (currentScreen !== 'profile-setup' &&
           currentScreen !== 'auth' &&
           currentScreen !== 'splash' &&
-          currentScreen !== 'onboarding') {
+          currentScreen !== 'onboarding' &&
+          currentScreen !== 'home') {
         navigate('profile-setup');
       }
     }

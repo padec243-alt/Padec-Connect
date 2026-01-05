@@ -1,11 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
 }
 
+// Détecte si on est sur un vrai appareil mobile (Capacitor ou mobile browser)
+const useIsNativeMobile = () => {
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    // Vérifie si on est dans Capacitor (app native)
+    const isCapacitor = !!(window as any).Capacitor?.isNativePlatform?.();
+    
+    // Vérifie si c'est un appareil mobile via user agent ou écran tactile
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isSmallScreen = window.innerWidth <= 768;
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    setIsNative(isCapacitor || (isMobileDevice && isSmallScreen && isTouchDevice));
+  }, []);
+
+  return isNative;
+};
+
 export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
+  const isNativeMobile = useIsNativeMobile();
+
+  // Sur mobile natif, afficher directement le contenu sans le cadre téléphone
+  if (isNativeMobile) {
+    return (
+      <div className="w-full h-screen bg-slate-950 flex flex-col overflow-hidden">
+        {children}
+      </div>
+    );
+  }
+
+  // Sur desktop, afficher le simulateur avec le cadre téléphone
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-900 p-4 lg:p-8 font-sans bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-800 via-slate-950 to-black">
       {/* Phone Frame */}

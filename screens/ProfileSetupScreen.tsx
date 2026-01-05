@@ -10,7 +10,7 @@ import { getCountriesList, NATIONALITIES } from '../data/geographicData';
 
 export const ProfileSetupScreen: React.FC = () => {
   const { navigate } = useNavigation();
-  const { user } = useAuthContext();
+  const { user, refreshProfile } = useAuthContext();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,19 +88,25 @@ export const ProfileSetupScreen: React.FC = () => {
         );
       }
 
-      // Update user profile in Firestore
-      await FirestoreService.updateDocument('users', user.uid, {
+      // Create or update user profile in Firestore (using setDocument with merge to handle new users)
+      await FirestoreService.setDocument('users', user.uid, {
+        email: user.email,
+        displayName: user.displayName || '',
         phone,
         country,
         city,
         nationality,
         profilePictureUrl,
         profileSetupCompleted: true,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      });
+      }, true);
 
-      // Navigate to home
-      setTimeout(() => navigate('home'), 500);
+      // Rafraîchir le profil dans le contexte
+      await refreshProfile();
+
+      // Navigate to home immediately
+      navigate('home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour du profil');
     } finally {
