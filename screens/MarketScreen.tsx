@@ -6,6 +6,7 @@ import { useNavigation } from '../context/NavigationContext';
 import { useCart } from '../context/CartContext';
 import { ModuleNavBar } from '../components/ModuleNavBar';
 import { Product } from '../types';
+import { FirestoreService } from '../services/FirestoreService';
 
 interface Category {
   id: string;
@@ -29,34 +30,15 @@ const categories: Category[] = [
   { id: 'cadeaux', name: 'Cadeaux', icon: Gift, color: 'red' },
 ];
 
-const products: Product[] = [
+// Données de démonstration (utilisées si Firebase est vide)
+const demoProducts: Product[] = [
   { id: 'p1', name: 'Costume Homme Élégant', description: 'Costume 3 pièces haute couture', price: 250000, originalPrice: 320000, category: 'vetements', inStock: true, rating: 4.8 },
   { id: 'p2', name: 'Robe de Soirée', description: 'Robe élégante pour occasions spéciales', price: 180000, category: 'mode', inStock: true, rating: 4.9 },
   { id: 'p3', name: 'Ensemble Wax Africain', description: 'Tenue traditionnelle moderne', price: 95000, category: 'vetements', inStock: true, rating: 4.7 },
   { id: 'p4', name: 'Chaussures Cuir Italien', description: 'Chaussures de luxe en cuir véritable', price: 150000, originalPrice: 200000, category: 'chaussures', inStock: true, rating: 4.8 },
   { id: 'p5', name: 'Sneakers Premium', description: 'Baskets tendance haute qualité', price: 85000, category: 'chaussures', inStock: true, rating: 4.6 },
-  { id: 'p6', name: 'Escarpins Femme', description: 'Talons hauts élégants', price: 75000, category: 'chaussures', inStock: false, rating: 4.5 },
-  { id: 'p7', name: 'Parfum Homme Luxe', description: 'Eau de parfum 100ml - Notes boisées', price: 120000, category: 'parfums', inStock: true, rating: 4.9 },
-  { id: 'p8', name: 'Parfum Femme Élégance', description: 'Fragrance florale 50ml', price: 95000, category: 'parfums', inStock: true, rating: 4.8 },
-  { id: 'p9', name: 'Kit Soins Visage', description: 'Ensemble complet de soins beauté', price: 65000, category: 'esthetique', inStock: true, rating: 4.7 },
-  { id: 'p10', name: 'Coffret Maquillage Pro', description: 'Palette professionnelle complète', price: 85000, category: 'esthetique', inStock: true, rating: 4.6 },
-  { id: 'p11', name: 'Perceuse Sans Fil', description: 'Perceuse professionnelle 18V', price: 120000, category: 'bricolage', inStock: true, rating: 4.8 },
-  { id: 'p12', name: 'Boîte à Outils Complète', description: '150 pièces professionnelles', price: 180000, category: 'bricolage', inStock: true, rating: 4.9 },
-  { id: 'p13', name: 'Semences Bio Premium', description: 'Pack de semences variées', price: 25000, category: 'agriculture', inStock: true, rating: 4.5 },
-  { id: 'p14', name: 'Système Irrigation Goutte', description: 'Kit irrigation automatique', price: 350000, category: 'agriculture', inStock: true, rating: 4.7 },
-  { id: 'p15', name: 'Smartphone Dernière Génération', description: '256GB, Double SIM, 5G', price: 850000, originalPrice: 950000, category: 'tech', inStock: true, rating: 4.9 },
-  { id: 'p16', name: 'Pack Solaire Home 3kW', description: 'Kit complet autonomie énergétique', price: 450000, originalPrice: 520000, category: 'tech', inStock: true, rating: 4.8 },
-  { id: 'p17', name: 'Ordinateur Portable Pro', description: 'PC haute performance 16GB RAM', price: 750000, category: 'tech', inStock: true, rating: 4.7 },
-  { id: 'p18', name: 'Écouteurs Bluetooth', description: 'Son premium, réduction de bruit', price: 95000, category: 'tech', inStock: true, rating: 4.6 },
-  { id: 'p19', name: 'Canapé 3 Places', description: 'Canapé moderne en cuir synthétique', price: 450000, category: 'maison', inStock: true, rating: 4.8 },
-  { id: 'p20', name: 'Lit King Size', description: 'Lit avec matelas orthopédique', price: 650000, category: 'maison', inStock: true, rating: 4.9 },
-  { id: 'p21', name: 'Montre Automatique Luxe', description: 'Mouvement suisse, bracelet cuir', price: 380000, category: 'montres', inStock: true, rating: 4.9 },
-  { id: 'p22', name: 'Smartwatch Sport', description: 'Montre connectée étanche', price: 125000, category: 'montres', inStock: true, rating: 4.7 },
-  { id: 'p23', name: 'Coffret Cadeau Premium', description: 'Assortiment luxe pour toutes occasions', price: 150000, category: 'cadeaux', inStock: true, rating: 4.8 },
-  { id: 'p24', name: 'Panier Gourmand', description: 'Sélection de produits fins', price: 75000, category: 'cadeaux', inStock: true, rating: 4.6 },
+  { id: 'p6', name: 'Smartphone Dernière Génération', description: '256GB, Double SIM, 5G', price: 850000, originalPrice: 950000, category: 'tech', inStock: true, rating: 4.9 },
 ];
-
-const sponsoredProducts = products.filter(p => p.originalPrice || (p.rating && p.rating >= 4.8)).slice(0, 8);
 
 export const MarketScreen: React.FC = () => {
   const { navigate, goBack } = useNavigation();
@@ -65,6 +47,24 @@ export const MarketScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('home');
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [products, setProducts] = useState<Product[]>(demoProducts);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les produits depuis Firebase
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const firebaseProducts = await FirestoreService.getCollection<Product>('products');
+        if (firebaseProducts.length > 0) {
+          setProducts(firebaseProducts);
+        }
+      } catch (error) {
+        console.error('Erreur chargement produits:', error);
+      }
+      setLoading(false);
+    };
+    loadProducts();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -72,6 +72,8 @@ export const MarketScreen: React.FC = () => {
     }, 50);
     return () => clearInterval(interval);
   }, []);
+
+  const sponsoredProducts = products.filter(p => p.originalPrice || (p.rating && p.rating >= 4.8)).slice(0, 8);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -192,8 +194,12 @@ export const MarketScreen: React.FC = () => {
               onClick={() => navigate('product-detail', { product })}
               className="bg-slate-900/40 border border-slate-800/80 rounded-xl overflow-hidden cursor-pointer hover:border-purple-500/50 transition-all group"
             >
-              <div className="aspect-square bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center relative">
-                <ShoppingBag size={40} className="text-slate-600 group-hover:text-purple-400 transition-colors" />
+              <div className="aspect-square bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center relative overflow-hidden">
+                {product.image ? (
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <ShoppingBag size={40} className="text-slate-600 group-hover:text-purple-400 transition-colors" />
+                )}
                 {!product.inStock && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                     <span className="text-white font-bold text-xs">Rupture</span>

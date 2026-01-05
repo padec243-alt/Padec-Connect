@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, Calendar, MapPin, Clock, Star, Filter, Ticket, Music, Briefcase, GraduationCap, Heart, PartyPopper, ChevronRight, Check } from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { useNavigation } from '../context/NavigationContext';
 import { ModuleNavBar } from '../components/ModuleNavBar';
+import { FirestoreService } from '../services/FirestoreService';
 
 interface Event {
   id: string;
@@ -21,6 +22,8 @@ interface Event {
   organizer: string;
   rating: number;
   featured: boolean;
+  image?: string;
+  images?: string[];
 }
 
 const eventCategories = [
@@ -32,12 +35,11 @@ const eventCategories = [
   { id: 'party', name: 'Fête', icon: PartyPopper },
 ];
 
-const events: Event[] = [
+// Données de démonstration
+const demoEvents: Event[] = [
   { id: 'ev1', name: 'Salon PME & PMI Kinshasa-Chine 2025', description: 'Le plus grand salon d\'affaires RDC-Chine.', category: 'business', date: '2025-02-15', time: '09:00', location: 'Pullman Kinshasa', address: 'Avenue Batetela, Gombe', price: 50000, vipPrice: 150000, availableTickets: 450, totalTickets: 500, organizer: 'PADEC Events', rating: 4.9, featured: true },
   { id: 'ev2', name: 'Concert Fally Ipupa Live', description: 'Le Dicap la Merveille en concert exclusif.', category: 'music', date: '2025-01-20', time: '20:00', location: 'Stade des Martyrs', address: 'Avenue de la Libération', price: 25000, vipPrice: 100000, availableTickets: 8500, totalTickets: 10000, organizer: 'Fally Events', rating: 4.8, featured: true },
   { id: 'ev3', name: 'Formation Marketing Digital', description: 'Stratégies marketing avec certification.', category: 'education', date: '2025-01-25', time: '09:00', location: 'PADEC Hub', address: 'Avenue du Commerce', price: 75000, availableTickets: 25, totalTickets: 30, organizer: 'PADEC Academy', rating: 4.7, featured: false },
-  { id: 'ev4', name: 'Nuit de la Mode Kinshasa', description: 'Défilé de mode avec créateurs africains.', category: 'culture', date: '2025-02-01', time: '19:00', location: 'Fleuve Congo Hotel', address: 'Boulevard du 30 Juin', price: 35000, vipPrice: 80000, availableTickets: 180, totalTickets: 200, organizer: 'Fashion Week DRC', rating: 4.6, featured: true },
-  { id: 'ev5', name: 'Soirée Networking Entrepreneurs', description: 'Rencontrez d\'autres entrepreneurs.', category: 'business', date: '2025-01-18', time: '18:00', location: 'Rooftop Le Stanley', address: 'Avenue Stanley', price: 15000, availableTickets: 95, totalTickets: 100, organizer: 'Startup Kinshasa', rating: 4.5, featured: false },
 ];
 
 export const EventsScreen: React.FC = () => {
@@ -48,6 +50,24 @@ export const EventsScreen: React.FC = () => {
   const [selectedTicketType, setSelectedTicketType] = useState<string>('standard');
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('home');
+  const [events, setEvents] = useState<Event[]>(demoEvents);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les événements depuis Firebase
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const firebaseEvents = await FirestoreService.getCollection<Event>('events');
+        if (firebaseEvents.length > 0) {
+          setEvents(firebaseEvents);
+        }
+      } catch (error) {
+        console.error('Erreur chargement événements:', error);
+      }
+      setLoading(false);
+    };
+    loadEvents();
+  }, []);
 
   const featuredEvents = events.filter(e => e.featured);
 

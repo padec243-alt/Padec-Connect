@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, Heart, MapPin, Phone, Clock, Star, Building2, Stethoscope, Syringe, Truck, MessageCircle } from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { useNavigation } from '../context/NavigationContext';
 import { ModuleNavBar } from '../components/ModuleNavBar';
+import { FirestoreService } from '../services/FirestoreService';
 
 interface HealthService {
   id: string;
@@ -18,6 +19,7 @@ interface HealthService {
   openHours: string;
   price?: number;
   description: string;
+  image?: string;
 }
 
 const healthCategories = [
@@ -29,14 +31,11 @@ const healthCategories = [
   { id: 'ambulance', name: 'Ambulances', icon: Truck },
 ];
 
-const healthServices: HealthService[] = [
+// Données de démonstration
+const demoHealthServices: HealthService[] = [
   { id: 'h1', name: 'Hôpital Général de Kinshasa', type: 'hospital', specialty: 'Urgences, Chirurgie', address: 'Avenue de l\'Hôpital, Gombe', distance: '2.5 km', rating: 4.5, available: true, phone: '+243 81 234 5678', openHours: '24h/24', description: 'Centre hospitalier de référence.' },
-  { id: 'h2', name: 'Clinique Ngaliema', type: 'hospital', specialty: 'Cardiologie', address: 'Avenue des Cliniques, Ngaliema', distance: '4.2 km', rating: 4.8, available: true, phone: '+243 81 345 6789', openHours: '24h/24', description: 'Clinique spécialisée en cardiologie.' },
   { id: 'd1', name: 'Dr. Jean-Pierre Mbuyi', type: 'doctor', specialty: 'Médecine Générale', address: 'Cabinet Médical Limete', distance: '1.8 km', rating: 4.9, available: true, phone: '+243 82 123 4567', openHours: '8h - 18h', price: 50000, description: '15 ans d\'expérience.' },
-  { id: 'd2', name: 'Dr. Marie Kabongo', type: 'doctor', specialty: 'Pédiatrie', address: 'Centre Médical Gombe', distance: '3.1 km', rating: 4.7, available: false, phone: '+243 82 234 5678', openHours: '9h - 17h', price: 75000, description: 'Spécialiste pédiatrique.' },
   { id: 'n1', name: 'Service Infirmier Express', type: 'nurse', specialty: 'Soins à domicile', address: 'Tout Kinshasa', rating: 4.6, available: true, phone: '+243 83 123 4567', openHours: '24h/24', price: 25000, description: 'Injections, pansements à domicile.' },
-  { id: 'a1', name: 'Conseil Santé PADEC', type: 'advisor', specialty: 'Orientation médicale', address: 'Service en ligne', rating: 4.9, available: true, phone: '+243 84 123 4567', openHours: '8h - 22h', price: 15000, description: 'Orientation et conseils santé.' },
-  { id: 'am1', name: 'Ambulance Urgence Plus', type: 'ambulance', address: 'Intervention Kinshasa', distance: '10 min', rating: 4.7, available: true, phone: '+243 85 999 999', openHours: '24h/24', price: 150000, description: 'Ambulance équipée.' },
 ];
 
 export const HealthScreen: React.FC = () => {
@@ -45,6 +44,24 @@ export const HealthScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedService, setSelectedService] = useState<HealthService | null>(null);
   const [activeTab, setActiveTab] = useState('home');
+  const [healthServices, setHealthServices] = useState<HealthService[]>(demoHealthServices);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les services santé depuis Firebase
+  useEffect(() => {
+    const loadHealthServices = async () => {
+      try {
+        const firebaseServices = await FirestoreService.getCollection<HealthService>('health');
+        if (firebaseServices.length > 0) {
+          setHealthServices(firebaseServices);
+        }
+      } catch (error) {
+        console.error('Erreur chargement services santé:', error);
+      }
+      setLoading(false);
+    };
+    loadHealthServices();
+  }, []);
 
   const filteredServices = healthServices.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, Building, Home, MapPin, Star, Filter, Bed, Bath, Square, Car, Wifi, Users, Calendar, ChevronRight, Hotel, Key, DollarSign } from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { useNavigation } from '../context/NavigationContext';
 import { ModuleNavBar } from '../components/ModuleNavBar';
+import { FirestoreService } from '../services/FirestoreService';
 
 type HousingSection = 'main' | 'hotels' | 'rentals' | 'sales';
 
@@ -25,6 +26,7 @@ interface Listing {
   available: boolean;
   featured: boolean;
   description: string;
+  images?: string[];
 }
 
 const provinces = ['Toutes', 'Kinshasa', 'Haut-Katanga', 'Nord-Kivu', 'Sud-Kivu', 'Kongo-Central'];
@@ -36,19 +38,12 @@ const cities: Record<string, string[]> = {
   'Kongo-Central': ['Matadi', 'Boma', 'Muanda'],
 };
 
-const listings: Listing[] = [
-  // Hotels
+// Données de démonstration
+const demoListings: Listing[] = [
   { id: 'h1', title: 'Pullman Kinshasa Grand Hotel', type: 'hotel', category: 'hotel', price: 250000, priceUnit: '/nuit', location: 'Avenue Batetela, Gombe', city: 'Gombe', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: 45, rating: 4.8, amenities: ['Wifi', 'Piscine', 'Restaurant', 'Gym'], available: true, featured: true, description: 'Hôtel 5 étoiles au cœur de Kinshasa.' },
   { id: 'h2', title: 'Fleuve Congo Hotel', type: 'hotel', category: 'hotel', price: 180000, priceUnit: '/nuit', location: 'Boulevard du 30 Juin', city: 'Gombe', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: 38, rating: 4.6, amenities: ['Wifi', 'Vue Fleuve', 'Restaurant'], available: true, featured: true, description: 'Vue imprenable sur le fleuve Congo.' },
-  { id: 'h3', title: 'Lubumbashi Grand Hotel', type: 'hotel', category: 'hotel', price: 150000, priceUnit: '/nuit', location: 'Centre-ville', city: 'Lubumbashi', province: 'Haut-Katanga', bedrooms: 1, bathrooms: 1, surface: 35, rating: 4.5, amenities: ['Wifi', 'Parking', 'Restaurant'], available: true, featured: false, description: 'Meilleur hôtel de Lubumbashi.' },
-  // Locations
   { id: 'r1', title: 'Appartement Moderne Gombe', type: 'apartment', category: 'rental', price: 1500000, priceUnit: '/mois', location: 'Avenue du Commerce', city: 'Gombe', province: 'Kinshasa', bedrooms: 3, bathrooms: 2, surface: 120, amenities: ['Parking', 'Sécurité', 'Générateur'], available: true, featured: true, description: 'Appartement haut standing meublé.' },
-  { id: 'r2', title: 'Villa avec Jardin Ngaliema', type: 'house', category: 'rental', price: 3500000, priceUnit: '/mois', location: 'Quartier Ma Campagne', city: 'Ngaliema', province: 'Kinshasa', bedrooms: 5, bathrooms: 4, surface: 350, amenities: ['Jardin', 'Piscine', 'Gardien'], available: true, featured: true, description: 'Grande villa familiale avec piscine.' },
-  { id: 'r3', title: 'Studio Meublé Limete', type: 'apartment', category: 'rental', price: 450000, priceUnit: '/mois', location: 'Avenue Sendwe', city: 'Limete', province: 'Kinshasa', bedrooms: 1, bathrooms: 1, surface: 35, amenities: ['Meublé', 'Wifi'], available: true, featured: false, description: 'Studio idéal pour célibataire.' },
-  // Ventes
   { id: 's1', title: 'Terrain Constructible Kintambo', type: 'land', category: 'sale', price: 150000000, priceUnit: '', location: 'Avenue Kasa-Vubu', city: 'Kintambo', province: 'Kinshasa', surface: 500, amenities: ['Titre Foncier', 'Eau', 'Électricité'], available: true, featured: true, description: 'Terrain prêt à construire avec titre.' },
-  { id: 's2', title: 'Maison à Vendre Gombe', type: 'house', category: 'sale', price: 450000000, priceUnit: '', location: 'Avenue des Cliniques', city: 'Gombe', province: 'Kinshasa', bedrooms: 6, bathrooms: 5, surface: 400, amenities: ['Jardin', 'Garage', 'Titre'], available: true, featured: true, description: 'Belle maison avec titre de propriété.' },
-  { id: 's3', title: 'Appartement Neuf Lubumbashi', type: 'apartment', category: 'sale', price: 120000000, priceUnit: '', location: 'Quartier Golf', city: 'Lubumbashi', province: 'Haut-Katanga', bedrooms: 3, bathrooms: 2, surface: 110, amenities: ['Neuf', 'Parking', 'Sécurité'], available: true, featured: false, description: 'Appartement neuf dans résidence sécurisée.' },
 ];
 
 export const HousingScreen: React.FC = () => {
@@ -60,6 +55,24 @@ export const HousingScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<string>('all');
+  const [listings, setListings] = useState<Listing[]>(demoListings);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les hébergements depuis Firebase
+  useEffect(() => {
+    const loadListings = async () => {
+      try {
+        const firebaseListings = await FirestoreService.getCollection<Listing>('housing');
+        if (firebaseListings.length > 0) {
+          setListings(firebaseListings);
+        }
+      } catch (error) {
+        console.error('Erreur chargement hébergements:', error);
+      }
+      setLoading(false);
+    };
+    loadListings();
+  }, []);
 
   const getFilteredListings = (category: 'hotel' | 'rental' | 'sale') => {
     return listings.filter(l => {

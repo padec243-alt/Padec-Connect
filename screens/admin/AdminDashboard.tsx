@@ -175,11 +175,14 @@ const SingleImageUpload: React.FC<ImageUploadProps> = ({ label, value, onChange,
     
     setUploading(true);
     try {
-      const url = await StorageService.uploadFile(file, folder);
+      // Générer un chemin unique pour le fichier
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+      const filePath = `${folder}/${fileName}`;
+      const url = await StorageService.uploadFile(filePath, file);
       onChange(url);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Erreur lors de l\'upload');
+      alert('Erreur lors de l\'upload: ' + (error as Error).message);
     }
     setUploading(false);
   };
@@ -232,11 +235,14 @@ const MultiImageUpload: React.FC<MultiImageUploadProps> = ({ label, values, onCh
     
     setUploading(true);
     try {
-      const url = await StorageService.uploadFile(file, folder);
+      // Générer un chemin unique pour le fichier
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+      const filePath = `${folder}/${fileName}`;
+      const url = await StorageService.uploadFile(filePath, file);
       onChange([...values, url]);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Erreur lors de l\'upload');
+      alert('Erreur lors de l\'upload: ' + (error as Error).message);
     }
     setUploading(false);
   };

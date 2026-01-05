@@ -1,83 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Search, FileText, Plane, Briefcase, Users, GraduationCap, Building, Filter } from 'lucide-react';
+import { ArrowLeft, Search, FileText, Plane, Briefcase, Users, GraduationCap, Building, Filter, Wrench } from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { useNavigation } from '../context/NavigationContext';
 import { Service } from '../types';
+import { FirestoreService } from '../services/FirestoreService';
 
-const services: Service[] = [
-  {
-    id: '1',
-    title: 'Démarches Administratives',
-    description: 'Accompagnement pour toutes vos démarches administratives en RD Congo',
-    category: 'Administratif',
-    icon: FileText,
-    price: 50000,
-    duration: '2-5 jours',
-    location: 'Kinshasa',
-    rating: 4.8
-  },
-  {
-    id: '2',
-    title: 'Assistance Voyages',
-    description: 'Organisation complète de vos voyages et assistance sur place',
-    category: 'Voyage',
-    icon: Plane,
-    price: 100000,
-    duration: 'Sur mesure',
-    location: 'Toute la RDC',
-    rating: 4.9
-  },
-  {
-    id: '3',
-    title: 'Conseil Entrepreneuriat',
-    description: 'Accompagnement pour créer et développer votre entreprise',
-    category: 'Entrepreneuriat',
-    icon: Briefcase,
-    price: 200000,
-    duration: 'Mensuel',
-    location: 'Kinshasa',
-    rating: 4.7
-  },
-  {
-    id: '4',
-    title: 'Mise en Relation',
-    description: 'Connexion avec les bons partenaires et prestataires',
-    category: 'Réseau',
-    icon: Users,
-    price: 75000,
-    duration: 'Ponctuel',
-    location: 'Toute la RDC',
-    rating: 4.6
-  },
-  {
-    id: '5',
-    title: 'Formations Professionnelles',
-    description: 'Formations adaptées à vos besoins professionnels',
-    category: 'Formation',
-    icon: GraduationCap,
-    price: 150000,
-    duration: 'Variable',
-    location: 'Kinshasa',
-    rating: 4.8
-  },
-  {
-    id: '6',
-    title: 'Domiciliation & Hébergement',
-    description: 'Aide à trouver un logement ou installer vos bureaux',
-    category: 'Immobilier',
-    icon: Building,
-    price: 300000,
-    duration: 'Sur mesure',
-    location: 'Kinshasa',
-    rating: 4.5
-  }
+// Données de démonstration
+const demoServices: Service[] = [
+  { id: '1', title: 'Démarches Administratives', description: 'Accompagnement pour toutes vos démarches administratives en RD Congo', category: 'Administratif', icon: FileText, price: 50000, duration: '2-5 jours', location: 'Kinshasa', rating: 4.8 },
+  { id: '2', title: 'Assistance Voyages', description: 'Organisation complète de vos voyages et assistance sur place', category: 'Voyage', icon: Plane, price: 100000, duration: 'Sur mesure', location: 'Toute la RDC', rating: 4.9 },
+  { id: '3', title: 'Conseil Entrepreneuriat', description: 'Accompagnement pour créer et développer votre entreprise', category: 'Entrepreneuriat', icon: Briefcase, price: 200000, duration: 'Mensuel', location: 'Kinshasa', rating: 4.7 },
+  { id: '4', title: 'Mise en Relation', description: 'Connexion avec les bons partenaires et prestataires', category: 'Réseau', icon: Users, price: 75000, duration: 'Ponctuel', location: 'Toute la RDC', rating: 4.6 },
+  { id: '5', title: 'Formations Professionnelles', description: 'Formations adaptées à vos besoins professionnels', category: 'Formation', icon: GraduationCap, price: 150000, duration: 'Variable', location: 'Kinshasa', rating: 4.8 },
+  { id: '6', title: 'Domiciliation & Hébergement', description: 'Aide à trouver un logement ou installer vos bureaux', category: 'Immobilier', icon: Building, price: 300000, duration: 'Sur mesure', location: 'Kinshasa', rating: 4.5 }
 ];
 
 export const ServicesScreen: React.FC = () => {
   const { navigate, goBack } = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>(demoServices);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les services depuis Firebase
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const firebaseServices = await FirestoreService.getCollection<any>('services');
+        if (firebaseServices.length > 0) {
+          // Mapper les données Firebase vers le format Service
+          const mappedServices = firebaseServices.map(s => ({
+            ...s,
+            icon: Wrench // Icône par défaut pour les services Firebase
+          }));
+          setServices(mappedServices);
+        }
+      } catch (error) {
+        console.error('Erreur chargement services:', error);
+      }
+      setLoading(false);
+    };
+    loadServices();
+  }, []);
 
   const categories = Array.from(new Set(services.map(s => s.category)));
   const filteredServices = services.filter(service => {
@@ -162,8 +127,12 @@ export const ServicesScreen: React.FC = () => {
                 className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 cursor-pointer hover:bg-slate-800/60 transition-colors"
               >
                 <div className="flex gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 flex-shrink-0">
-                    <Icon size={24} className="text-cyan-400" />
+                  <div className="w-14 h-14 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 flex-shrink-0 overflow-hidden">
+                    {service.image ? (
+                      <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Icon size={24} className="text-cyan-400" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">

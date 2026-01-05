@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, MapPin, Clock, Users, Wifi, Coffee, Monitor, Star, Check, Calendar, Building2, DoorOpen, Presentation } from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { useNavigation } from '../context/NavigationContext';
 import { ModuleNavBar } from '../components/ModuleNavBar';
 import { Button } from '../components/UI';
+import { FirestoreService } from '../services/FirestoreService';
 
 interface WorkSpace {
   id: string;
@@ -20,6 +21,7 @@ interface WorkSpace {
   amenities: string[];
   available: boolean;
   openHours: string;
+  images?: string[];
 }
 
 const spaceTypes = [
@@ -29,91 +31,11 @@ const spaceTypes = [
   { id: 'meeting-room', name: 'Salle de Réunion', icon: Presentation },
 ];
 
-const workspaces: WorkSpace[] = [
-  {
-    id: 'ws1',
-    name: 'PADEC Hub Central',
-    type: 'coworking',
-    description: 'Espace de coworking moderne au cœur de Kinshasa avec vue panoramique.',
-    address: 'Avenue du Commerce, Gombe, Kinshasa',
-    pricePerDay: 25000,
-    pricePerMonth: 450000,
-    capacity: 50,
-    rating: 4.9,
-    amenities: ['Wifi Haut Débit', 'Café Gratuit', 'Imprimante', 'Climatisation'],
-    available: true,
-    openHours: '7h - 22h'
-  },
-  {
-    id: 'ws2',
-    name: 'Bureau Privé Executive',
-    type: 'private-office',
-    description: 'Bureau privé équipé pour 2-4 personnes avec services de secrétariat.',
-    address: 'Boulevard du 30 Juin, Gombe',
-    pricePerDay: 75000,
-    pricePerMonth: 1200000,
-    capacity: 4,
-    rating: 4.8,
-    amenities: ['Bureau Meublé', 'Ligne Téléphonique', 'Secrétariat', 'Parking'],
-    available: true,
-    openHours: '8h - 20h'
-  },
-  {
-    id: 'ws3',
-    name: 'Salle Innovation',
-    type: 'meeting-room',
-    description: 'Salle de réunion high-tech avec écran 75" et système de visioconférence.',
-    address: 'Avenue Batetela, Gombe',
-    pricePerHour: 50000,
-    pricePerDay: 300000,
-    capacity: 20,
-    rating: 4.7,
-    amenities: ['Écran 75"', 'Visioconférence', 'Tableau Blanc', 'Café'],
-    available: true,
-    openHours: '8h - 21h'
-  },
-  {
-    id: 'ws4',
-    name: 'Startup Garage',
-    type: 'coworking',
-    description: 'Espace créatif pour startups avec événements networking réguliers.',
-    address: 'Avenue Kasa-Vubu, Kintambo',
-    pricePerDay: 15000,
-    pricePerMonth: 250000,
-    capacity: 40,
-    rating: 4.6,
-    amenities: ['Wifi', 'Événements', 'Mentorat', 'Cuisine'],
-    available: true,
-    openHours: '8h - 22h'
-  },
-  {
-    id: 'ws5',
-    name: 'Bureau Solo',
-    type: 'private-office',
-    description: 'Petit bureau privé idéal pour freelance ou consultant.',
-    address: 'Avenue Tombalbaye, Gombe',
-    pricePerDay: 35000,
-    pricePerMonth: 500000,
-    capacity: 1,
-    rating: 4.5,
-    amenities: ['Bureau', 'Wifi', 'Climatisation', 'Accès 24/7'],
-    available: false,
-    openHours: '24h/24'
-  },
-  {
-    id: 'ws6',
-    name: 'Boardroom Premium',
-    type: 'meeting-room',
-    description: 'Salle de conseil d\'administration luxueuse pour réunions importantes.',
-    address: 'Pullman Kinshasa, Gombe',
-    pricePerHour: 100000,
-    pricePerDay: 500000,
-    capacity: 12,
-    rating: 4.9,
-    amenities: ['Table de Conférence', 'Écrans Multiples', 'Service Traiteur', 'Parking VIP'],
-    available: true,
-    openHours: '7h - 23h'
-  },
+// Données de démonstration
+const demoWorkspaces: WorkSpace[] = [
+  { id: 'ws1', name: 'PADEC Hub Central', type: 'coworking', description: 'Espace de coworking moderne au cœur de Kinshasa avec vue panoramique.', address: 'Avenue du Commerce, Gombe, Kinshasa', pricePerDay: 25000, pricePerMonth: 450000, capacity: 50, rating: 4.9, amenities: ['Wifi Haut Débit', 'Café Gratuit', 'Imprimante', 'Climatisation'], available: true, openHours: '7h - 22h' },
+  { id: 'ws2', name: 'Bureau Privé Executive', type: 'private-office', description: 'Bureau privé équipé pour 2-4 personnes avec services de secrétariat.', address: 'Boulevard du 30 Juin, Gombe', pricePerDay: 75000, pricePerMonth: 1200000, capacity: 4, rating: 4.8, amenities: ['Bureau Meublé', 'Ligne Téléphonique', 'Secrétariat', 'Parking'], available: true, openHours: '8h - 20h' },
+  { id: 'ws3', name: 'Salle Innovation', type: 'meeting-room', description: 'Salle de réunion high-tech avec écran 75" et système de visioconférence.', address: 'Avenue Batetela, Gombe', pricePerHour: 50000, pricePerDay: 300000, capacity: 20, rating: 4.7, amenities: ['Écran 75"', 'Visioconférence', 'Tableau Blanc', 'Café'], available: true, openHours: '8h - 21h' },
 ];
 
 export const CoworkingScreen: React.FC = () => {
@@ -123,6 +45,24 @@ export const CoworkingScreen: React.FC = () => {
   const [selectedSpace, setSelectedSpace] = useState<WorkSpace | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<'hour' | 'day' | 'month'>('day');
   const [activeTab, setActiveTab] = useState('home');
+  const [workspaces, setWorkspaces] = useState<WorkSpace[]>(demoWorkspaces);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les espaces depuis Firebase
+  useEffect(() => {
+    const loadWorkspaces = async () => {
+      try {
+        const firebaseWorkspaces = await FirestoreService.getCollection<WorkSpace>('workspaces');
+        if (firebaseWorkspaces.length > 0) {
+          setWorkspaces(firebaseWorkspaces);
+        }
+      } catch (error) {
+        console.error('Erreur chargement espaces:', error);
+      }
+      setLoading(false);
+    };
+    loadWorkspaces();
+  }, []);
 
   const filteredSpaces = workspaces.filter(space => {
     const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

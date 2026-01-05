@@ -1,57 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, Users, MapPin, CheckCircle } from 'lucide-react';
 import { SafeArea } from '../components/MobileLayout';
 import { useNavigation } from '../context/NavigationContext';
 import { Actor } from '../types';
+import { FirestoreService } from '../services/FirestoreService';
 
-const actors: Actor[] = [
-  {
-    id: 'a1',
-    name: 'Tech Solutions RDC',
-    category: 'Technologie',
-    location: 'Kinshasa',
-    verified: true,
-    description: 'Solutions technologiques innovantes pour entreprises',
-    services: ['Développement', 'Consulting', 'Formation'],
-    rating: 4.8
-  },
-  {
-    id: 'a2',
-    name: 'Immobilier Pro',
-    category: 'Immobilier',
-    location: 'Lubumbashi',
-    verified: true,
-    description: 'Expert en immobilier commercial et résidentiel',
-    services: ['Vente', 'Location', 'Conseil'],
-    rating: 4.7
-  },
-  {
-    id: 'a3',
-    name: 'Formation Excellence',
-    category: 'Formation',
-    location: 'Kinshasa',
-    verified: false,
-    description: 'Formations professionnelles certifiées',
-    services: ['Formation IT', 'Management', 'Langues'],
-    rating: 4.6
-  },
-  {
-    id: 'a4',
-    name: 'Consulting Business',
-    category: 'Consulting',
-    location: 'Kinshasa',
-    verified: true,
-    description: 'Accompagnement stratégique pour entreprises',
-    services: ['Stratégie', 'Finance', 'Marketing'],
-    rating: 4.9
-  }
+// Données de démonstration
+const demoActors: Actor[] = [
+  { id: 'a1', name: 'Tech Solutions RDC', category: 'Technologie', location: 'Kinshasa', verified: true, description: 'Solutions technologiques innovantes pour entreprises', services: ['Développement', 'Consulting', 'Formation'], rating: 4.8 },
+  { id: 'a2', name: 'Immobilier Pro', category: 'Immobilier', location: 'Lubumbashi', verified: true, description: 'Expert en immobilier commercial et résidentiel', services: ['Vente', 'Location', 'Conseil'], rating: 4.7 },
+  { id: 'a3', name: 'Formation Excellence', category: 'Formation', location: 'Kinshasa', verified: false, description: 'Formations professionnelles certifiées', services: ['Formation IT', 'Management', 'Langues'], rating: 4.6 },
+  { id: 'a4', name: 'Consulting Business', category: 'Consulting', location: 'Kinshasa', verified: true, description: 'Accompagnement stratégique pour entreprises', services: ['Stratégie', 'Finance', 'Marketing'], rating: 4.9 }
 ];
 
 export const RepertoireScreen: React.FC = () => {
   const { navigate, goBack } = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [actors, setActors] = useState<Actor[]>(demoActors);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les acteurs depuis Firebase
+  useEffect(() => {
+    const loadActors = async () => {
+      try {
+        const firebaseActors = await FirestoreService.getCollection<Actor>('actors');
+        if (firebaseActors.length > 0) {
+          setActors(firebaseActors);
+        }
+      } catch (error) {
+        console.error('Erreur chargement acteurs:', error);
+      }
+      setLoading(false);
+    };
+    loadActors();
+  }, []);
 
   const categories = Array.from(new Set(actors.map(a => a.category)));
   const filteredActors = actors.filter(actor => {
